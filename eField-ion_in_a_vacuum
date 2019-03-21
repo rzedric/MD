@@ -1,0 +1,74 @@
+# input file to track the motion of a free charged particle in an electric field
+# code tracks the position and velocity of a charged particle
+units metal     # distance in angstroms, energy in eV, time in ps, mass in grams/mole
+dimension 3
+processors * * *   # let LAMMPS assign this automatically
+boundary p p p   # x y z boundary conditions.  P or S or F
+
+atom_style charge   # each atom has a given charge
+
+atom_modify sort 0 0
+#      Sort the list of atoms in each processor's sub domain to speed up the simulation
+#      This is turned off by using Nfreq = 0
+#      syntax: atom_modify keyword values
+#      atom_modify sort Nfreq binsize
+#      Nfreq: sort atoms spatially every n timesteps
+#      binsize: size of bins for spatial sorting (distance units)
+
+region myBox block -10 10 -10 10 -10 10
+#      syntax: region-ID style args keyword arg ...
+#      block args: xlo, xhi, ylo, yhi, zlo zhi
+
+create_box	1 myBox  
+#      syntax: create_box N region-ID
+#      N is number of atom types used in simulation
+#      region-ID is ID of the region used in the simulation domain
+#      "myBox" is just a name from the region command
+
+create_atoms 1 single 0 0 0 
+#      a single atom is positioned at coordinates x y x 
+#      syntax: create_atoms type style args keyword values
+#      type: type of atom, with value equalling 1 through N (from create_box command)
+#      style: "box" or "region" or "single" or "random"
+#         where 
+#         "box", when used with "lattice" command, will fill the entire simulation box with 
+#         particles on the lattice
+#         "region" also fills a geometric volume with particles on the lattice
+#         "single" lets you place an atom in a specific spot
+#         "random" fills the system with particles at random positions.  particles will overlap
+#         and an energy minimization is required to equilibrate the system
+
+# set mass
+mass 1 1
+
+# set charge
+set atom 1 charge 1
+
+# Potential
+pair_style none    # pair forces and energies are not computed
+
+# specify a thermodynamic ensemble
+fix		1 all nve
+# fix 1 all nvt temp 300 300 100
+
+#   Electric field
+fix 2 all efield 1e-9 0.0 0.0
+#   applies an E-field in the x=+1 direction to all atoms.  name of the fix is 1.  
+#      example in manual: fix kick external-field efield 1.0 0.0 0.0
+#      with syntax: fix ID group-ID efield ex ey ez keyword value ...
+#      where ID is a user-assigned name for the fix
+#      where group-ID is the ID of the group of atoms the fix is applied to
+#      efield is the name of this command
+#      ex, ey, ez are E-field component values or variables (units of electric field)
+#      keyword is an optionally specified region or energy
+#      value is the corresponding value 
+
+dump 1 all custom 1 dump.eField-v0 id q x y z vx vy vz
+#       example: # dump 1 all atom 500 dump.eField
+#       syntax: dump ID group-ID style N file args
+#       style: 
+#       N: print an output every N timesteps
+#       file: the name of the output file
+
+timestep    100
+run 10
